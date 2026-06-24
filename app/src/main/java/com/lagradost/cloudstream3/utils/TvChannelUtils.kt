@@ -135,29 +135,62 @@ object TvChannelUtils {
         Log.d("ProgramDelete", "Finished deleting stored programs")
     }
 
-    fun createTvChannel(context: Context) {
+    fun createTvChannel(context: Context, channelName: String): Long? {
         val componentName = ComponentName(context, MainActivity::class.java)
         val iconUri = "android.resource://${context.packageName}/mipmap/ic_launcher".toUri()
         val inputId = TvContractCompat.buildInputId(componentName)
         val channel = Channel.Builder()
             .setType(TvContractCompat.Channels.TYPE_PREVIEW)
             .setAppLinkIconUri(iconUri)
-            .setDisplayName(context.getString(R.string.app_name))
+            .setDisplayName(channelName)
             .setAppLinkIntent(Intent(Intent.ACTION_VIEW).apply {
                 data = "cloudstreamapp://open".toUri()
             })
             .setInputId(inputId)
             .build()
 
-        val channelUri = context.contentResolver.insert(
-            TvContractCompat.Channels.CONTENT_URI,
-            channel.toContentValues()
-        )
+        return try {
+            val channelUri = context.contentResolver.insert(
+                TvContractCompat.Channels.CONTENT_URI,
+                channel.toContentValues()
+            )
 
-        channelUri?.let {
-            val channelId = ContentUris.parseId(it)
-            TvContractCompat.requestChannelBrowsable(context, channelId)
-            Log.d("TvChannelUtils", "Channel Created: $channelId")
+            channelUri?.let {
+                val channelId = ContentUris.parseId(it)
+                TvContractCompat.requestChannelBrowsable(context, channelId)
+                Log.d("TvChannelUtils", "Channel Created: $channelId")
+                channelId
+            }
+        } catch (e: Exception) {
+            Log.e("TvChannelUtils", "Failed to create channel, likely not supported on this device", e)
+            null
+        }
+    }
+
+    fun clearProgramsForChannel(context: Context, channelId: Long) {
+        try {
+            val rowsDeleted = context.contentResolver.delete(
+                TvContractCompat.PreviewPrograms.CONTENT_URI,
+                "${TvContractCompat.PreviewPrograms.COLUMN_CHANNEL_ID} = ?",
+                arrayOf(channelId.toString())
+            )
+            Log.d("TvChannelUtils", "Deleted $rowsDeleted programs for channel $channelId")
+        } catch (e: Exception) {
+            Log.e("TvChannelUtils", "Failed to clear programs for channel: $channelId", e)
+        }
+    }
+
+    fun removeLegacyChannel(context: Context) {
+        val legacyId = getChannelId(context, context.getString(R.string.app_name))
+        if (legacyId != null) {
+            try {
+                clearProgramsForChannel(context, legacyId)
+                val uri = TvContractCompat.buildChannelUri(legacyId)
+                context.contentResolver.delete(uri, null, null)
+                Log.d("TvChannelUtils", "Removed legacy channel $legacyId")
+            } catch (e: Exception) {
+                Log.e("TvChannelUtils", "Error removing legacy channel", e)
+            }
         }
     }
 

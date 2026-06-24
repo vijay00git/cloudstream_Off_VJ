@@ -71,6 +71,8 @@ class HomeParentItemAdapterPreview(
         viewModel.click(it)
     }, moreInfoClickCallback = {
         viewModel.popup(it)
+    }, addCollectionClickCallback = {
+        viewModel.showAddCollectionPopup(it)
     }, expandCallback = {
         viewModel.expand(it)
     }) {

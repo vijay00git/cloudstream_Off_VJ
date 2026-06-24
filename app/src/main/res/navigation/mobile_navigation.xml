@@ -700,4 +700,16 @@
         android:name="com.lagradost.cloudstream3.ui.EasterEggMonkeFragment"
         android:label="EasterEggMonkeFragment"
         tools:layout="@layout/fragment_easter_egg_monke" />
+    <fragment
+        android:id="@+id/navigation_collection"
+        android:name="com.lagradost.cloudstream3.ui.collection.CollectionFragment"
+        android:label="Collections">
+        <action
+            android:id="@+id/action_navigation_collection_to_navigation_results_phone"
+            app:destination="@id/navigation_results_phone" />
+        <action
+            android:id="@+id/action_navigation_collection_to_navigation_results_tv"
+            app:destination="@id/navigation_results_tv" />
+    </fragment>
+
 </navigation>

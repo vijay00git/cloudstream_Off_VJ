@@ -37,6 +37,7 @@ open class ParentItemAdapter(
     id: Int,
     private val clickCallback: (SearchClickCallback) -> Unit,
     private val moreInfoClickCallback: (HomeViewModel.ExpandableHomepageList) -> Unit,
+    private val addCollectionClickCallback: ((HomeViewModel.ExpandableHomepageList) -> Unit)? = null,
     private val expandCallback: ((String) -> Unit)? = null,
 ) : BaseAdapter<HomeViewModel.ExpandableHomepageList, Bundle>(
     id,
@@ -163,6 +164,11 @@ open class ParentItemAdapter(
                 homeChildMoreInfo.setOnClickListener {
                     moreInfoClickCallback.invoke(item)
                 }
+            }
+            
+            val addBtn = binding.root.findViewById<android.widget.ImageView>(R.id.home_child_add_collection)
+            addBtn?.setOnClickListener {
+                addCollectionClickCallback?.invoke(item)
             }
         }
     }

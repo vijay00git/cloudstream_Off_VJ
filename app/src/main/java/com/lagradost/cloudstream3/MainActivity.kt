@@ -501,6 +501,7 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener, BiometricCa
             R.id.navigation_home,
             R.id.navigation_search,
             R.id.navigation_library,
+            R.id.navigation_collection,
             R.id.navigation_downloads,
             R.id.navigation_settings,
             R.id.navigation_download_child,
@@ -1789,6 +1790,7 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener, BiometricCa
                 R.id.navigation_search,
                 R.id.navigation_library,
                 R.id.navigation_downloads,
+                R.id.navigation_collection,
                 R.id.navigation_settings
             )) {
                 val view = rail.findViewById<View?>(id) ?: continue
@@ -1998,14 +2000,7 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener, BiometricCa
         }
 
         main {
-            val channelId =
-                TvChannelUtils.getChannelId(this@MainActivity, getString(R.string.app_name))
-            if (channelId == null) {
-                Log.d("TvChannel", "Channel not found, creating")
-                TvChannelUtils.createTvChannel(this@MainActivity)
-            } else {
-                Log.d("TvChannel", "Channel ID: $channelId")
-            }
+            TvChannelUtils.removeLegacyChannel(this@MainActivity)
         }
 
         getKey<String>(USER_SELECTED_HOMEPAGE_API)?.let { homepage ->

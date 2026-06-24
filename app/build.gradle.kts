@@ -9,9 +9,11 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.dokka)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.compose.compiler)
 }
 
 val javaTarget = JvmTarget.fromTarget(libs.versions.jvmTarget.get())
+base.archivesName.set("CloudStream-${libs.versions.versionName.get()}-${libs.versions.versionCode.get()}")
 
 abstract class GenerateGitHashTask : DefaultTask() {
 
@@ -199,6 +201,7 @@ android {
     buildFeatures {
         buildConfig = true
         viewBinding = true
+        compose = true
     }
 
     packaging {
@@ -233,6 +236,23 @@ dependencies {
     implementation(libs.bundles.navigation)
     implementation(libs.kotlinx.collections.immutable)
     implementation(libs.kotlinx.serialization.json) // JSON Parser
+
+    // Jetpack Compose
+    implementation(platform(libs.compose.bom))
+    implementation(libs.compose.ui)
+    implementation(libs.compose.ui.graphics)
+    implementation(libs.compose.ui.tooling.preview)
+    implementation(libs.compose.material3)
+    implementation(libs.activity.compose)
+    implementation(libs.lifecycle.viewmodel.compose)
+    debugImplementation(libs.compose.ui.tooling)
+    
+    // Jetpack Compose TV
+    implementation(libs.tv.foundation)
+    implementation(libs.tv.material)
+    
+    // Coil for Compose
+    implementation(libs.coil.compose)
 
     // Design & UI
     implementation(libs.preference.ktx)

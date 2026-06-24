@@ -29,6 +29,7 @@ import com.lagradost.cloudstream3.ui.player.NEXT_WATCH_EPISODE_PERCENTAGE
 import com.lagradost.cloudstream3.ui.result.EpisodeSortType
 import com.lagradost.cloudstream3.ui.result.ResultEpisode
 import com.lagradost.cloudstream3.ui.result.VideoWatchState
+import com.lagradost.cloudstream3.ui.collection.CustomCollection
 import com.lagradost.cloudstream3.utils.AppContextUtils.filterProviderByPreferredMedia
 import com.lagradost.cloudstream3.utils.downloader.DownloadObjects
 import java.util.Calendar
@@ -51,6 +52,7 @@ const val RESULT_SEASON = "result_season"
 const val RESULT_DUB = "result_dub"
 const val KEY_RESULT_SORT = "result_sort"
 const val USER_PINNED_PROVIDERS = "user_pinned_providers" //key for pinned user set
+const val CUSTOM_COLLECTIONS_DATA = "custom_collections_data"
 
 class UserPreferenceDelegate<T : Any>(
     private val key: String, private val default: T //, private val klass: KClass<T>
@@ -640,6 +642,20 @@ object DataStoreHelper {
     fun getFavoritesData(id: Int?): FavoritesData? {
         if (id == null) return null
         return getKey("$currentAccount/$RESULT_FAVORITES_STATE_DATA", id.toString())
+    }
+    
+    fun getAllCustomCollections(): List<CustomCollection> {
+        return getKeys("$currentAccount/$CUSTOM_COLLECTIONS_DATA")?.mapNotNull {
+            getKey(it)
+        } ?: emptyList()
+    }
+    
+    fun setCustomCollection(collection: CustomCollection) {
+        setKey("$currentAccount/$CUSTOM_COLLECTIONS_DATA", collection.id, collection)
+    }
+    
+    fun removeCustomCollection(id: String) {
+        removeKey("$currentAccount/$CUSTOM_COLLECTIONS_DATA", id)
     }
 
     fun setViewPos(id: Int?, pos: Long, dur: Long) {

@@ -57,6 +57,9 @@ import com.lagradost.cloudstream3.ui.settings.Globals.EMULATOR
 import com.lagradost.cloudstream3.ui.settings.Globals.PHONE
 import com.lagradost.cloudstream3.ui.settings.Globals.TV
 import com.lagradost.cloudstream3.ui.settings.Globals.isLandscape
+import com.lagradost.cloudstream3.ui.result.setLinearListLayout
+import com.lagradost.cloudstream3.ui.collection.CustomCollection
+import com.lagradost.cloudstream3.ui.collection.CollectionSection
 import com.lagradost.cloudstream3.ui.settings.Globals.isLayout
 import com.lagradost.cloudstream3.utils.AppContextUtils.filterProviderByPreferredMedia
 import com.lagradost.cloudstream3.utils.AppContextUtils.getApiProviderLangSettings
@@ -513,31 +516,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>(
     private val homeViewModel: HomeViewModel by activityViewModels()
     private val accountViewModel: AccountViewModel by activityViewModels()
 
-    fun addMovies(cards: List<SearchResponse>) {
-        val ctx = context ?: run {
-            Log.e(TAG, "Context is null, aborting addMovies")
-            return
-        }
 
-        try {
-            val existingId = TvChannelUtils.getChannelId(ctx, getString(R.string.app_name))
-            if (existingId != null) {
-                Log.d(TAG, "Channel ID: $existingId")
-
-                val programCards = cards
-
-                TvChannelUtils.addPrograms(
-                    context = ctx,
-                    channelId = existingId,
-                    items = programCards
-                )
-            } else {
-                Log.d(TAG, "Channel does not exist")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error adding movies: $e")
-        }
-    }
 
     private fun deleteAll() {
         val ctx = context ?: run {
@@ -613,7 +592,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>(
             // empty the channel
             deleteAll()
             // insert the program from first array
-            addMovies(data.list.list)
+
         }
     }
 
@@ -868,6 +847,59 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>(
                 homeViewModel.popup(null)
                 bottomSheetDialog = null
             }, deleteCallback = delete)
+        }
+        
+        observeNullable(homeViewModel.addCollectionPopup) { expandableList ->
+            if (expandableList == null) return@observeNullable
+            
+            val listName = expandableList.list.name
+            val apiName = expandableList.list.list.firstOrNull()?.apiName
+            
+            if (apiName == null) {
+                homeViewModel.showAddCollectionPopup(null)
+                return@observeNullable
+            }
+            
+            val collections = DataStoreHelper.getAllCustomCollections()
+            val collectionNames = collections.map { it.name }.toMutableList()
+            collectionNames.add("Create New Collection...")
+            
+            val builder = androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            builder.setTitle("Add to Collection")
+            builder.setItems(collectionNames.toTypedArray()) { dialog, which ->
+                if (which == collections.size) {
+                    val input = android.widget.EditText(requireContext())
+                    androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                        .setTitle("New Collection Name")
+                        .setView(input)
+                        .setPositiveButton("Create") { _, _ ->
+                            val name = input.text.toString()
+                            if (name.isNotBlank()) {
+                                val newCollection = CustomCollection(name = name, sections = listOf(CollectionSection(apiName, listName)))
+                                DataStoreHelper.setCustomCollection(newCollection)
+                                showToast("Added to $name", android.widget.Toast.LENGTH_SHORT)
+                            }
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                } else {
+                    val collection = collections[which]
+                    val updatedSections = collection.sections.toMutableList()
+                    if (updatedSections.none { it.apiName == apiName && it.listName == listName }) {
+                        updatedSections.add(CollectionSection(apiName, listName))
+                        val updatedCollection = collection.copy(sections = updatedSections)
+                        DataStoreHelper.setCustomCollection(updatedCollection)
+                        showToast("Added to ${collection.name}", android.widget.Toast.LENGTH_SHORT)
+                    } else {
+                        showToast("Already in ${collection.name}", android.widget.Toast.LENGTH_SHORT)
+                    }
+                }
+                homeViewModel.showAddCollectionPopup(null)
+            }
+            builder.setOnCancelListener {
+                homeViewModel.showAddCollectionPopup(null)
+            }
+            builder.show()
         }
 
         homeViewModel.reloadStored()

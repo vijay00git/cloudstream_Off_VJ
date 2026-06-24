@@ -17,6 +17,10 @@
             android:icon="@drawable/netflix_download"
             android:title="@string/title_downloads" />
         <item
+            android:id="@+id/navigation_collection"
+            android:icon="@drawable/ic_baseline_add_24"
+            android:title="Collections" />
+        <item
             android:id="@+id/navigation_settings"
             android:icon="@drawable/settings_icon_selector"
             android:title="@string/title_settings" />

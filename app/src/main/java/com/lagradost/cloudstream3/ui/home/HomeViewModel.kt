@@ -424,11 +424,15 @@ class HomeViewModel : ViewModel() {
     private val _popup = MutableLiveData<Pair<ExpandableHomepageList, (() -> Unit)?>?>(null)
     val popup: LiveData<Pair<ExpandableHomepageList, (() -> Unit)?>?> = _popup
 
+    private val _addCollectionPopup = MutableLiveData<ExpandableHomepageList?>(null)
+    val addCollectionPopup: LiveData<ExpandableHomepageList?> = _addCollectionPopup
+
     fun popup(list: ExpandableHomepageList?, deleteCallback: (() -> Unit)? = null) {
-        if (list == null)
-            _popup.postValue(null)
-        else
-            _popup.postValue(list to deleteCallback)
+        _popup.postValue(if (list == null) null else Pair(list, deleteCallback))
+    }
+
+    fun showAddCollectionPopup(list: ExpandableHomepageList?) {
+        _addCollectionPopup.postValue(list)
     }
 
     private fun bookmarksUpdated(unused: Boolean) {
