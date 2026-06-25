@@ -1,0 +1,115 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ master, main, develop ]
+    paths-ignore:
+      - '*.md'
+      - '*.json'
+      - '**/wcokey.txt'
+  pull_request:
+    branches: [ master, main, develop ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: "build-apk"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: wrapper
+
+      - name: Build Release APK
+        run: ./gradlew assembleRelease
+        env:
+          # Build configuration variables
+          SIMKL_CLIENT_ID: ${{ secrets.SIMKL_CLIENT_ID || 'default' }}
+          SIMKL_CLIENT_SECRET: ${{ secrets.SIMKL_CLIENT_SECRET || 'default' }}
+          MAL_KEY: ${{ secrets.MAL_KEY || 'default' }}
+          ANILIST_KEY: ${{ secrets.ANILIST_KEY || 'default' }}
+
+      - name: Build Debug APK (if needed)
+        if: always()
+        run: ./gradlew assembleDebug
+        continue-on-error: true
+
+      - name: Rename APK files
+        run: |
+          mkdir -p build_artifacts
+          
+          # Copy release APKs if they exist
+          if [ -d "app/build/outputs/apk/stable/release" ]; then
+            cp app/build/outputs/apk/stable/release/*.apk build_artifacts/ || true
+          fi
+          
+          # Copy debug APKs if they exist
+          if [ -d "app/build/outputs/apk/stable/debug" ]; then
+            cp app/build/outputs/apk/stable/debug/*.apk build_artifacts/ || true
+          fi
+          
+          # List all APKs found
+          echo "Found APK files:"
+          ls -lh build_artifacts/
+          
+          if [ -z "$(ls -A build_artifacts/)" ]; then
+            echo "Warning: No APK files found in expected directories"
+            find app/build/outputs -name "*.apk" -exec cp {} build_artifacts/ \;
+          fi
+
+      - name: Upload APK artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-build-${{ github.run_number }}
+          path: build_artifacts/
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Upload Build Logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs-${{ github.run_number }}
+          path: app/build/reports/
+          retention-days: 7
+
+      - name: Post Build Summary
+        if: always()
+        run: |
+          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Run Number**: ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -d "build_artifacts" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### APK Files Generated" >> $GITHUB_STEP_SUMMARY
+            ls -lh build_artifacts/ | tail -n +2 | awk '{print "- " $9 " (" $5 ")"}' >> $GITHUB_STEP_SUMMARY || echo "- No APK files found" >> $GITHUB_STEP_SUMMARY
+          fi
