@@ -30,6 +30,8 @@ import androidx.compose.ui.unit.sp
 import com.lagradost.cloudstream3.ui.settings.Globals.isLayout
 import com.lagradost.cloudstream3.ui.settings.Globals.TV
 import com.lagradost.cloudstream3.ui.settings.Globals.EMULATOR
+import android.net.nsd.NsdServiceInfo
+import com.lagradost.cloudstream3.utils.PlannerNetworkSyncManager
 
 // Expands recurring events for the next 7 days in upcoming schedule
 fun getUpcomingOccurrences(events: List<CalendarEvent>, days: Int = 7): List<CalendarEvent> {
@@ -94,6 +96,7 @@ fun CalendarTasksScreen(
     var selectedEventForOptions by remember { mutableStateOf<CalendarEvent?>(null) }
     var selectedTaskForOptions by remember { mutableStateOf<GoogleTask?>(null) }
     var showClearAllConfirm by remember { mutableStateOf(false) }
+    var showWifiSyncDialog by remember { mutableStateOf(false) }
 
     // Filter and Sort states
     var selectedPriorityFilter by remember { mutableStateOf("All") }
@@ -196,20 +199,40 @@ fun CalendarTasksScreen(
                         )
                     }
 
-                    // Clear button
-                    var isClearFocused by remember { mutableStateOf(false) }
-                    Button(
-                        onClick = { showClearAllConfirm = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C2C2C)),
-                        modifier = Modifier
-                            .onFocusChanged { isClearFocused = it.isFocused }
-                            .border(
-                                width = if (isClearFocused) 2.dp else 0.dp,
-                                color = if (isClearFocused) Color.White else Color.Transparent,
-                                shape = RoundedCornerShape(50)
-                            )
+                    // Buttons Row
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Reset All", fontSize = 13.sp)
+                        var isWifiSyncFocused by remember { mutableStateOf(false) }
+                        Button(
+                            onClick = { showWifiSyncDialog = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C2C2C)),
+                            modifier = Modifier
+                                .onFocusChanged { isWifiSyncFocused = it.isFocused }
+                                .border(
+                                    width = if (isWifiSyncFocused) 2.dp else 0.dp,
+                                    color = if (isWifiSyncFocused) Color.White else Color.Transparent,
+                                    shape = RoundedCornerShape(50)
+                                )
+                        ) {
+                            Text("Wi-Fi Sync", fontSize = 13.sp)
+                        }
+
+                        var isClearFocused by remember { mutableStateOf(false) }
+                        Button(
+                            onClick = { showClearAllConfirm = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C2C2C)),
+                            modifier = Modifier
+                                .onFocusChanged { isClearFocused = it.isFocused }
+                                .border(
+                                    width = if (isClearFocused) 2.dp else 0.dp,
+                                    color = if (isClearFocused) Color.White else Color.Transparent,
+                                    shape = RoundedCornerShape(50)
+                                )
+                        ) {
+                            Text("Reset All", fontSize = 13.sp)
+                        }
                     }
                 }
             }
@@ -470,6 +493,15 @@ fun CalendarTasksScreen(
                     TextButton(onClick = { showClearAllConfirm = false }) {
                         Text("Cancel")
                     }
+                }
+            )
+        }
+
+        if (showWifiSyncDialog) {
+            WifiSyncDialog(
+                onDismiss = { showWifiSyncDialog = false },
+                onSyncCompleted = {
+                    viewModel.loadData()
                 }
             )
         }
@@ -1267,6 +1299,160 @@ fun EventOptionsDialog(
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text("Cancel")
+            }
+        }
+    )
+
+}
+
+@Composable
+fun WifiSyncDialog(
+    onDismiss: () -> Unit,
+    onSyncCompleted: () -> Unit
+) {
+    val context = LocalContext.current
+    var syncStatus by remember { mutableStateOf("Ready to sync") }
+    var hostList by remember { mutableStateOf<List<android.net.nsd.NsdServiceInfo>>(emptyList()) }
+    var isHosting by remember { mutableStateOf(false) }
+    var isScanning by remember { mutableStateOf(false) }
+
+    val syncManager = remember {
+        PlannerNetworkSyncManager(
+            context = context,
+            onHostsUpdated = { list -> hostList = list },
+            onSyncStatus = { status -> syncStatus = status },
+            onSyncCompleted = onSyncCompleted
+        )
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            syncManager.stopHosting()
+            syncManager.stopDiscovery()
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Local Network Sync", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Sync and merge events/tasks between your Mobile and TV on the same Wi-Fi network.",
+                    color = Color.LightGray,
+                    fontSize = 13.sp
+                )
+
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF2E2E2E)))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("Host Sync Server", fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(
+                            text = if (isHosting) "🟢 Other devices can connect" else "🔴 Offline",
+                            fontSize = 12.sp,
+                            color = Color.Gray
+                        )
+                    }
+
+                    FocusableSelectionButton(
+                        text = if (isHosting) "Stop Hosting" else "Start Hosting",
+                        onClick = {
+                            if (isHosting) {
+                                syncManager.stopHosting()
+                                isHosting = false
+                            } else {
+                                syncManager.startHosting()
+                                isHosting = true
+                            }
+                        },
+                        color = if (isHosting) Color.Red else Color(0xFF00E5FF)
+                    )
+                }
+
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF2E2E2E)))
+
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Discover Nearby Devices", fontWeight = FontWeight.Bold, color = Color.White)
+                        
+                        FocusableSelectionButton(
+                            text = if (isScanning) "Stop Scan" else "Scan Network",
+                            onClick = {
+                                if (isScanning) {
+                                    syncManager.stopDiscovery()
+                                    isScanning = false
+                                } else {
+                                    syncManager.startDiscovery()
+                                    isScanning = true
+                                }
+                            }
+                        )
+                    }
+
+                    if (isScanning && hostList.isEmpty()) {
+                        Text("Searching for hosts...", color = Color.Gray, fontSize = 12.sp)
+                    } else if (hostList.isNotEmpty()) {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 120.dp)
+                        ) {
+                            items(hostList) { host ->
+                                var isHostCardFocused by remember { mutableStateOf(false) }
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            syncManager.performSyncWithHost(host)
+                                        }
+                                        .onFocusChanged { isHostCardFocused = it.isFocused }
+                                        .focusable()
+                                        .background(
+                                            color = if (isHostCardFocused) Color.White.copy(alpha = 0.15f) else Color(0xFF1E1E1E),
+                                            shape = RoundedCornerShape(8.dp)
+                                        )
+                                        .border(
+                                            width = if (isHostCardFocused) 2.dp else 1.dp,
+                                            color = if (isHostCardFocused) Color.White else Color(0xFF2E2E2E),
+                                            shape = RoundedCornerShape(8.dp)
+                                        )
+                                        .padding(12.dp)
+                                ) {
+                                    Text(
+                                        text = "${host.serviceName}",
+                                        color = Color.White,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF2E2E2E)))
+
+                Text(
+                    text = syncStatus,
+                    color = Color(0xFF00E5FF),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = onDismiss) {
+                Text("Done")
             }
         }
     )

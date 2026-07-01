@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:background="@drawable/planner_widget_background">
+
+    <!-- Header -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Personal Planner"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true" />
+
+        <TextView
+            android:id="@+id/widget_open_app"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="OPEN"
+            android:textColor="#00E5FF"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:padding="4dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true" />
+    </RelativeLayout>
+
+    <!-- Schedule Section -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="UPCOMING SCHEDULE"
+        android:textColor="#B388FF"
+        android:textSize="9sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="4dp" />
+
+    <TextView
+        android:id="@+id/widget_event_1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="No upcoming events"
+        android:textColor="#E0E0E0"
+        android:textSize="12sp"
+        android:ellipsize="end"
+        android:singleLine="true"
+        android:layout_marginBottom="2dp" />
+
+    <TextView
+        android:id="@+id/widget_event_2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textColor="#E0E0E0"
+        android:textSize="12sp"
+        android:ellipsize="end"
+        android:singleLine="true"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Tasks Section -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="CHECKLIST"
+        android:textColor="#00E5FF"
+        android:textSize="9sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="4dp" />
+
+    <TextView
+        android:id="@+id/widget_task_1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="No pending tasks"
+        android:textColor="#E0E0E0"
+        android:textSize="12sp"
+        android:ellipsize="end"
+        android:singleLine="true"
+        android:layout_marginBottom="2dp" />
+
+    <TextView
+        android:id="@+id/widget_task_2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textColor="#E0E0E0"
+        android:textSize="12sp"
+        android:ellipsize="end"
+        android:singleLine="true" />
+
+</LinearLayout>
