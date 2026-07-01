@@ -7,10 +7,15 @@ import com.lagradost.cloudstream3.HomePageList
 import com.lagradost.cloudstream3.MainPageRequest
 import com.lagradost.cloudstream3.utils.DataStoreHelper
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class CollectionViewModel : ViewModel() {
 
@@ -23,6 +28,8 @@ class CollectionViewModel : ViewModel() {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    private val mapMutex = Mutex()
+
     fun loadCollections(context: android.content.Context?) {
         val all = DataStoreHelper.getAllCustomCollections()
         _collections.value = all
@@ -34,50 +41,71 @@ class CollectionViewModel : ViewModel() {
         
         viewModelScope.launch(Dispatchers.IO) {
             _isLoading.value = true
-            val map = mutableMapOf<String, MutableList<Pair<CollectionSection, HomePageList>>>()
-            for (collection in all) {
-                map[collection.id] = mutableListOf()
-                val collectionItems = mutableListOf<com.lagradost.cloudstream3.SearchResponse>()
-                
-                for (section in collection.sections) {
-                    val api = APIHolder.getApiFromNameNull(section.apiName) ?: continue
-                    val mainPage = api.mainPage.find { it.name == section.listName } ?: continue
-                    
-                    try {
-                        val request = MainPageRequest(mainPage.name, mainPage.data, mainPage.horizontalImages)
-                        val response = api.getMainPage(1, request)
+            _collectionData.value = emptyMap()
+            
+            coroutineScope {
+                all.forEach { collection ->
+                    launch {
+                        val sectionData = mutableListOf<Pair<CollectionSection, HomePageList>>()
+                        val collectionItems = mutableListOf<com.lagradost.cloudstream3.SearchResponse>()
                         
-                        if (response != null) {
-                            val list = response.items.find { it.name == section.listName }
-                            if (list != null) {
-                                map[collection.id]?.add(Pair(section, list))
-                                collectionItems.addAll(list.list)
-                            } else {
-                                val firstList = response.items.firstOrNull()
-                                if (firstList != null) {
-                                    map[collection.id]?.add(Pair(section, HomePageList(section.listName, firstList.list)))
-                                    collectionItems.addAll(firstList.list)
+                        val sectionJobs = collection.sections.map { section ->
+                            async {
+                                val api = APIHolder.getApiFromNameNull(section.apiName) ?: return@async null
+                                val mainPage = api.mainPage.find { it.name == section.listName } ?: return@async null
+                                
+                                try {
+                                    val request = MainPageRequest(mainPage.name, mainPage.data, mainPage.horizontalImages)
+                                    val response = api.getMainPage(1, request)
+                                    
+                                    if (response != null) {
+                                        val list = response.items.find { it.name == section.listName }
+                                        if (list != null) {
+                                            return@async Pair(section, list)
+                                        } else {
+                                            val firstList = response.items.firstOrNull()
+                                            if (firstList != null) {
+                                                return@async Pair(section, HomePageList(section.listName, firstList.list))
+                                            }
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
                                 }
+                                null
                             }
                         }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-                
-                // Update TV Channel for this collection
-                if (context != null) {
-                    val channelId = com.lagradost.cloudstream3.utils.TvChannelUtils.getChannelId(context, collection.name)
-                        ?: com.lagradost.cloudstream3.utils.TvChannelUtils.createTvChannel(context, collection.name)
                         
-                    if (channelId != null) {
-                        com.lagradost.cloudstream3.utils.TvChannelUtils.clearProgramsForChannel(context, channelId)
-                        // User specified to push all items
-                        com.lagradost.cloudstream3.utils.TvChannelUtils.addPrograms(context, channelId, collectionItems)
+                        val results = sectionJobs.awaitAll().filterNotNull()
+                        for (res in results) {
+                            sectionData.add(res)
+                            collectionItems.addAll(res.second.list)
+                        }
+                        
+                        // Update TV Channel for this collection
+                        if (context != null) {
+                            try {
+                                val channelId = com.lagradost.cloudstream3.utils.TvChannelUtils.getChannelId(context, collection.name)
+                                    ?: com.lagradost.cloudstream3.utils.TvChannelUtils.createTvChannel(context, collection.name)
+                                    
+                                if (channelId != null) {
+                                    com.lagradost.cloudstream3.utils.TvChannelUtils.clearProgramsForChannel(context, channelId)
+                                    com.lagradost.cloudstream3.utils.TvChannelUtils.addPrograms(context, channelId, collectionItems)
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
+                        
+                        // Update _collectionData progressively in a thread-safe manner
+                        mapMutex.withLock {
+                            val currentMap = _collectionData.value.toMutableMap()
+                            currentMap[collection.id] = sectionData
+                            _collectionData.value = currentMap
+                        }
                     }
                 }
             }
-            _collectionData.value = map
             _isLoading.value = false
         }
     }
@@ -103,7 +131,7 @@ class CollectionViewModel : ViewModel() {
             DataStoreHelper.removeCustomCollection(collection.id)
             if (context != null) {
                 com.lagradost.cloudstream3.utils.TvChannelUtils.getChannelId(context, collection.name)?.let { channelId ->
-                    com.lagradost.cloudstream3.utils.TvChannelUtils.clearProgramsForChannel(context, channelId)
+                    com.lagradost.cloudstream3.utils.TvChannelUtils.deleteTvChannel(context, channelId)
                 }
             }
         }

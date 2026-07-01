@@ -180,6 +180,17 @@ object TvChannelUtils {
         }
     }
 
+    fun deleteTvChannel(context: Context, channelId: Long) {
+        try {
+            clearProgramsForChannel(context, channelId)
+            val uri = TvContractCompat.buildChannelUri(channelId)
+            context.contentResolver.delete(uri, null, null)
+            Log.d("TvChannelUtils", "Removed channel $channelId")
+        } catch (e: Exception) {
+            Log.e("TvChannelUtils", "Error removing channel $channelId", e)
+        }
+    }
+
     fun removeLegacyChannel(context: Context) {
         val legacyId = getChannelId(context, context.getString(R.string.app_name))
         if (legacyId != null) {

@@ -413,6 +413,13 @@
         app:exitAnim="@anim/exit_anim"
         app:popEnterAnim="@anim/enter_anim"
         app:popExitAnim="@anim/exit_anim" />
+    <action
+        android:id="@+id/action_navigation_global_to_navigation_calendar_tasks"
+        app:destination="@id/navigation_calendar_tasks"
+        app:enterAnim="@anim/enter_anim"
+        app:exitAnim="@anim/exit_anim"
+        app:popEnterAnim="@anim/enter_anim"
+        app:popExitAnim="@anim/exit_anim" />
 
     <fragment
         android:id="@+id/navigation_subtitles"
@@ -710,6 +717,15 @@
         <action
             android:id="@+id/action_navigation_collection_to_navigation_results_tv"
             app:destination="@id/navigation_results_tv" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/navigation_calendar_tasks"
+        android:name="com.lagradost.cloudstream3.ui.calendartasks.CalendarTasksFragment"
+        android:label="Calendar &amp; Tasks">
+        <deepLink
+            android:id="@+id/deepLink_calendar_tasks"
+            app:uri="cloudstreamapp://calendar_tasks" />
     </fragment>
 
 </navigation>

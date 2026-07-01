@@ -502,6 +502,7 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener, BiometricCa
             R.id.navigation_search,
             R.id.navigation_library,
             R.id.navigation_collection,
+            R.id.navigation_calendar_tasks,
             R.id.navigation_downloads,
             R.id.navigation_settings,
             R.id.navigation_download_child,
@@ -1227,6 +1228,7 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener, BiometricCa
                 }
             }
         }
+
 
         // just in case, MAIN SHOULD *NEVER* BOOT LOOP CRASH
         binding = try {

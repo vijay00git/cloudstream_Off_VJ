@@ -27,6 +27,9 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.lagradost.cloudstream3.APIHolder
 import com.lagradost.cloudstream3.SearchResponse
+import com.lagradost.cloudstream3.ui.settings.Globals.isLayout
+import com.lagradost.cloudstream3.ui.settings.Globals.TV
+import com.lagradost.cloudstream3.ui.settings.Globals.EMULATOR
 
 @Composable
 fun CollectionScreen(
@@ -44,14 +47,25 @@ fun CollectionScreen(
         viewModel.loadCollections(context)
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0E0E0E))) {
-        if (isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Color.White)
-            }
-        } else if (collections.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(text = "No collections yet.", style = MaterialTheme.typography.titleMedium, color = Color.White)
+    val isTv = isLayout(TV or EMULATOR)
+    val leftPadding = if (isTv) 80.dp else 0.dp
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF0E0E0E))
+            .systemBarsPadding()
+            .padding(start = leftPadding)
+    ) {
+        if (collections.isEmpty()) {
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Color.White)
+                }
+            } else {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(text = "No collections yet.", style = MaterialTheme.typography.titleMedium, color = Color.White)
+                }
             }
         } else {
             LazyColumn(
@@ -98,6 +112,14 @@ fun CollectionScreen(
                         }
                     }
                 }
+            }
+
+            if (isLoading) {
+                LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter).height(3.dp),
+                    color = Color.White,
+                    trackColor = Color.Transparent
+                )
             }
         }
         

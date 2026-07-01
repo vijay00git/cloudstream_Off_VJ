@@ -107,6 +107,12 @@
                 android:nextFocusUp="@id/settings_credits"
                 android:text="@string/extensions" />
 
+            <TextView
+                android:id="@+id/settings_calendar_tasks"
+                style="@style/SettingsItem"
+                android:nextFocusUp="@id/settings_extensions"
+                android:text="Calendar &amp; Tasks" />
+
             <LinearLayout
                 android:id="@+id/app_version_info"
                 android:layout_width="wrap_content"
